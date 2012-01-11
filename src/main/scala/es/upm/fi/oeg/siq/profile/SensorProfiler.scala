@@ -7,6 +7,7 @@ import java.io.FileWriter
 import au.com.bytecode.opencsv.CSVReader
 import scala.io.Source
 import scala.collection.mutable.HashMap
+import es.upm.fi.oeg.siq.data.compr.PwlhSummary
 
 object SensorProfiler {
   val dataPath = "g:/doc/semint/SensorAnnotation/benchmark/"
@@ -21,17 +22,18 @@ object SensorProfiler {
   val snowheight = ("Snow_height/snow_height_",4,"snowheight")
   val voltage = ("Voltage/voltage_",16,"voltage")
   val windspeed = ("Wind_speed/wind_speed_",40,"windspeed")
-  val props = Array(radiation)//co2,humidity,lysimeter,moisture,radiation,snowheight,voltage,windspeed)
+  val props = Array(temp,co2,humidity,lysimeter,moisture,radiation,snowheight,voltage,windspeed)
   
   val truth = new HashMap[String,Distribution]
   
   def generate = {
     props foreach (prop =>
-	  (1 to prop._2/2).foreach(i =>{
+	  (prop._2/2+1 to prop._2).foreach(i =>{
 	  //(13 to 20).foreach(i =>{  
 	    val w = new CSVWriter(new FileWriter(resultPath+prop._1+i+".csv"),',',CSVReader.DEFAULT_QUOTE_CHARACTER)
-	    (0 to 2).map(pow(2,_).toInt).foreach(buckets=> {
+	    (0 to  2).map(pow(2,_).toInt).foreach(buckets=> {
 	      val data = new CsvSeries(0,dataPath+prop._1+i+".csv",0,0)	
+	      try{
 	      val comp =  PwlhSummary(data,buckets);
 	      if (comp.max_buckets<data.maxCount/4 ) {
 	    	println("Bucket size: "+comp.max_buckets+". PerDay: "+buckets )
@@ -41,28 +43,20 @@ object SensorProfiler {
 	          w.writeNext(Array(buckets.toString,a.toString,""+dis.percentages,comp.toString))
 	        })
 	      }
+	      } catch{
+	        case e:Exception=>println("Exception: "+e)
+	      }
 	    })
 	    w.close
 	  })
     )
   }
   
-  def addTruth(prop:String,buckets:Int,angleFrac:Int,d:Distribution){
-    val key = prop+buckets+"-"+angleFrac
+  def addTruth(name:String,d:Distribution){//prop:String,buckets:Int,angleFrac:Int,d:Distribution){
+    val key = name//prop+buckets+"-"+angleFrac
     truth.get(key) match {
-      case Some(dis)=> println(key); println(dis.percentages); dis+d; println(dis.percentages)
+      case Some(dis)=> println(key); println(dis.percentages); truth.put(key,dis+d); //println(dis.percentages)
       case None => truth.put(key,d) }
-    
-//      val dis = truth.get(prop).get 
-//      dis+d }
-//    else  
-    //  truth.put(prop+buckets+"-"+angleFrac,d)
-    /*if (truth.contains(prop+buckets+"-"+angleFrac)){ 
-      val dis = truth.get(prop).get 
-      dis+d }
-    else  
-      truth.put(prop+buckets+"-"+angleFrac,d)*/  
-    
   }
   
   def filterTruth(buckets:Int,angleFrac:Int)={
@@ -85,9 +79,8 @@ object SensorProfiler {
   def loadDistributions(name:String,path:String,i:Int)={
     val csv = new CSVReader(Source.fromFile(path+i+".csv").bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
     Stream.continually(csv.readNext()).takeWhile(_!=null).map(a=>{
-      val d=( Distribution(name+i+a(0)+a(1), a(1).toInt, a(2).dropRight(1).drop(5).split(",").map(_.toDouble)))
-      d
-    })
+      val d=Distribution(name+i+a(0)+"-"+a(1), a(1).toInt, a(2).dropRight(1).drop(5).split(",").map(_.toDouble))
+      (d,a(0).toInt,a(1).toInt) })
   }
     
   
@@ -95,35 +88,37 @@ object SensorProfiler {
     props foreach (prop=>
       (1 to prop._2/2).foreach(i=>{
       //(1 to 1).foreach(i=>{
-        val csv = new CSVReader(Source.fromFile(resultPath+prop._1+i+".csv").bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
-        Stream.continually(csv.readNext()).takeWhile(_!=null).foreach(a=>{
-          val d=( Distribution(prop._3+i, a(1).toInt, a(2).dropRight(1).drop(5).split(",").map(_.toDouble)))
-        //loadDistributions(prop._3,prop._1,i).foreach(d=>{ 
-          addTruth(prop._3,a(0).toInt,a(1).toInt,d)
-         //println("dist"+d.values.values())         
-        })
+        //val csv = new CSVReader(Source.fromFile(resultPath+prop._1+i+".csv").bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
+        //Stream.continually(csv.readNext()).takeWhile(_!=null).foreach(a=>{
+         // val d=Distribution(prop._3+i, a(1).toInt, a(2).dropRight(1).drop(5).split(",").map(_.toDouble))
+        loadDistributions(prop._3,resultPath+prop._1,i).foreach{
+          case (d,buckets,angleFrac)=> addTruth(prop._3+buckets+"-"+angleFrac,d) }
+         //println("dist"+d.values.values())  }
       })
     )
     
   }
   
   def main(args: Array[String]): Unit = {
-    generate
-    //load
-    if (false){            
+    //generate
+    load
+    if (true){            
     truth.foreach(a=>println(a._1+" "+ a._2.percentages))
-    val testProps=Array(temp)//co2,humidity,lysimeter,moisture,radiation)
+    val testProps=Array(humidity)//co2,humidity,lysimeter,moisture,radiation)
     val buckets = 2
     val angleFrac = 12
-    (1 to 35).foreach{i=>
+    (20 to 20).foreach{i=>
     testProps.foreach{prop=>
-      val summ = PwlhSummary(new CsvSeries(0,dataPath+prop._1+i+".csv",0,0),buckets)
-      summ.pwlh
+      val dist=loadDistributions(prop._3,resultPath+prop._1,i).filter{
+        case (d,b,af)=> (b==buckets && af==angleFrac)}.first._1
+      //val summ = PwlhSummary(new CsvSeries(0,dataPath+prop._1+i+".csv",0,0),buckets)
+      //summ.pwlh
       //val summ = new LinearSummary(CsvSeries(dataPath+prop._1+i+".csv"),buckets)
       //summ.linearApprox
-      val d =summ.generateDistribution(Pi/angleFrac,20,false)
+      //val d =summ.generateDistribution(Pi/angleFrac,20,false)
       //println(prop._3)
-      compare(buckets,angleFrac,d)
+      println("Comparing "+dist.name)
+      compare(buckets,angleFrac,dist)
       //println(d.percentages)
       //println(summ.toString())
     }}

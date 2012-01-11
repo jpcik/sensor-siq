@@ -22,6 +22,8 @@ import java.io.InputStream
 import es.upm.fi.oeg.siq.data._
 import es.upm.fi.oeg.siq.profile.SensorProfiler._
 import scala.collection.mutable.ArrayBuffer
+import es.upm.fi.oeg.siq.data.compr.PwlhSummary
+import es.upm.fi.oeg.siq.data.compr.LinearSummary
 
 
 //import org.joda.time._
@@ -76,8 +78,8 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
   def testCompare(){
     val strs = new ArrayBuffer[String]
     val percs = new ArrayBuffer[List[Double]]
-    (2 to 2).foreach(i=>{
-    val summ = PwlhSummary(new CsvSeries(0,dataPath+radiation._1+i+".csv",0,0),2)
+    (35 to 35).foreach(i=>{
+    val summ = PwlhSummary(new CsvSeries(0,dataPath+temp._1+i+".csv",0,0),2)
     
     //println(summ.data.toString())
     

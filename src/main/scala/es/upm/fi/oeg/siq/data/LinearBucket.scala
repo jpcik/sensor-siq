@@ -8,12 +8,12 @@ import weka.core.Attribute
 import weka.core.Instances
 import weka.core.Instance
 
-class LinearBucket(val h:IHull) {
+class LinearBucket(val h:Hull) {
   var next:LinearBucket=_
   var prev:LinearBucket=_
   var lr:SimpleLinearRegression=_
 
-  def regression(hull:IHull) {
+  def regression(hull:Hull) {
 	lr = new SimpleLinearRegression
 	lr.setSuppressErrorMessage(true)
 	val fv = new FastVector

@@ -5,6 +5,7 @@ import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit
 import org.junit.Test
 import es.upm.fi.oeg.siq.data.cluster._
+import es.upm.fi.oeg.siq.data.IntMeans
 
 class ClusterTest extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
   @Test def testInitCluster{

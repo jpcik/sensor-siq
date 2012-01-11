@@ -4,34 +4,24 @@ import au.com.bytecode.opencsv.CSVReader
 import scala.io.Source
 import scala.collection.JavaConversions._
 
-
 abstract class Series(index:Int) {
   var max:Double = 0
   var min:Double = Double.PositiveInfinity	
   var closed=false	
   def count:Int
-  val interval:Double = 1
-  val period = 0
+  val interval = 1d
+  val period = 0d
   val maxCount=0
-		
+  
   protected def updateMaxMin(d:Double)={
     if (d>max) max =d
 	if (d<min) min =d
-  }
-  	
+  }  	
   def next():Option[Double]
   def stream:Stream[Double]
 }
-/*
-object SeriesFactory {
-  def newSeries(index:Int,interval:Double,seriesPaths:java.util.List[String],period:Int):Series={
-    val list = seriesPaths.map(path=>new CsvSeries(index,path,period,0))
-    new AggregateSeries(list)    
-  }
-}*/
 
 class CsvSeries(val index:Int,val filename:String,initPeriod:Int,startVal:Int=0) extends Series(index) {
-  
   val r = """###(\d+)""".r
   val s =  Source.fromFile(filename)
   override val interval=s.getLine(1) match {  
@@ -42,7 +32,7 @@ class CsvSeries(val index:Int,val filename:String,initPeriod:Int,startVal:Int=0)
     if (initPeriod<=0) s.getLines().length
     else (initPeriod*24*60/interval).toInt
   override val period = 
-    if (initPeriod<=0)  (maxCount*interval/(24*60)).toInt 
+    if (initPeriod<=0)  (maxCount*interval/(24*60))//.toInt 
   	else initPeriod
   //override val maxCount = (period*24*60/interval).toInt
   
@@ -75,20 +65,3 @@ class CsvSeries(val index:Int,val filename:String,initPeriod:Int,startVal:Int=0)
 object CsvSeries {
   def apply(filepath:String) =new CsvSeries(0,filepath,0,0)
 }
-/*
-class AggregateSeries(series:java.util.List[Series]) extends Series(0) {
-  override def next ={
-    val s= series.filter(!_.closed)
-    if (s.size==0)  None
-    else {
-      val d = s.head.next
-      if (d.isEmpty) next
-      else {
-        updateMaxMin(d.get)
-    	d }
-    }
-  }
-
-  override def count = series.map(a=>a.count) sum
-}
-*/
