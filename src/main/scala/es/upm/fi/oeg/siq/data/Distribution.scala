@@ -6,7 +6,7 @@ import scala.collection.immutable.List
 import scala.collection.JavaConversions._
 import scala.math._
  
-class Distribution(val name:String,val gap:Double) extends Means {
+class Distribution(val name:String,val gap:Double,val typeData:String) extends Means {
   val values:TreeMap[Double,Double] = new TreeMap
   (-Pi/2 to Pi/2 by gap).foreach(angle=>values.put(tan(angle),0))
   
@@ -17,9 +17,9 @@ class Distribution(val name:String,val gap:Double) extends Means {
 	values.put(entry.getKey(), entry.getValue()+weight) }
 
   def +(d:Distribution)={
-    val dd = new Distribution("added",gap)
+    val dd = new Distribution("generated",gap,this.typeData)
     val vv = d.values.entrySet zip values.entrySet
-    vv.foreach(a=>dd.add(a._1.getKey(),a._1.getValue()+a._2.getValue()))  
+    vv.foreach(a=>dd.add(a._1.getKey,a._1.getValue+a._2.getValue))  
     dd
   }
   def percentages={
@@ -64,9 +64,9 @@ class Distribution(val name:String,val gap:Double) extends Means {
 }
 
 object Distribution extends MeansUtils{
-  def apply(name:String,angleFrac:Int,values:Array[Double])={
+  def apply(name:String,angleFrac:Int,values:Array[Double],typeData:String)={
     val angle = Pi/angleFrac
-    val d = new Distribution(name,angle)
+    val d = new Distribution(name,angle,typeData)
     (-Pi/2 to Pi/2 by angle).zipWithIndex.
       foreach{case (a,i)=> d.add(tan(a),values(i))}
     d

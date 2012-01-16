@@ -26,9 +26,6 @@ import es.upm.fi.oeg.siq.data.compr.PwlhSummary
 import es.upm.fi.oeg.siq.data.compr.LinearSummary
 
 
-//import org.joda.time._
-
-
 //@RunWith(classOf[JUnitRunner])
 class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
   var sb: StringBuilder = _
@@ -78,8 +75,8 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
   def testCompare(){
     val strs = new ArrayBuffer[String]
     val percs = new ArrayBuffer[List[Double]]
-    (35 to 35).foreach(i=>{
-    val summ = PwlhSummary(new CsvSeries(0,dataPath+temp._1+i+".csv",0,0),2)
+    (13 to 13).foreach(i=>{
+    val summ = PwlhSummary(new CsvSeries(0,dataPath+humidity._1+i+".csv",0,0,humidity._3),2)
     
     //println(summ.data.toString())
     
@@ -98,7 +95,7 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
 
   @Test
   def testLinearAppr(){
-    val summ = new LinearSummary(new CsvSeries(0,dataPath+temp._1+"14.csv",10,0),2)
+    val summ = new LinearSummary(new CsvSeries(0,dataPath+temp._1+"14.csv",10,0,humidity._3),2)
     
     println(summ.data.toString())
     summ.linearApprox

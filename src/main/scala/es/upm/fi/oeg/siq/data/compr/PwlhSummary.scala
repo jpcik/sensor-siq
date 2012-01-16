@@ -22,80 +22,78 @@ class PwlhSummary(data:Series,bucketsPerDay:Int) extends Summary(data,bucketsPer
 	var count=0
 	var lb=firstLin
 	while (lb!=lastLin){
-	  val err = lb.getErrorSqrSum
-	  sum+=err
-	  lb= lb.next;
+	  sum+=lb.getErrorSqrSum
+	  lb=lb.next;
 	  count+=lb.h.size
 	}			
 	sqrt(sum/count)
   }
 	
   def pwlh() {
-	//index = new PriorityQueue[Index](10,new IndexComparator());
-	size=0;
-	lastLin=null;
-	firstLin=null;
-	var o:Option[Double]=None;
-	var i:Double = 0d;
+	size=0
+	lastLin=null
+	firstLin=null
+	var o:Option[Double]=None
+	var i=0d
 	while ({o=data.next;o.isDefined}){
-	  System.out.println("Data: "+o+ " Buckets: "+this.size+" "+max_buckets);
-	  val p = new Point(i,o.get);
-	  val b = new LinearBucket(Hull(p));			
+	  println("Data: "+o+ " Buckets: "+this.size+" "+max_buckets)
+	  val p = new Point(i,o.get)
+	  val b = new LinearBucket(Hull(p))			
 					
-	  b.next_$eq(null);
-	  b.prev_$eq(lastLin);
+	  b.next=null
+	  b.prev=lastLin
 	  if (b.prev!=null)
-	    b.prev.next_$eq(b);
+	    b.prev.next=b
 	  if (size>1){
-		val prev = b.prev;
-		index.add(new Index(b.getErrorMerge(),prev));
+		val prev = b.prev
+		index.add(new Index(b.getErrorMerge,prev))
 	  }	
 	  if (firstLin == null)
-		firstLin = b;
-	  lastLin = b;
-	  this.size+=1;
+		firstLin = b
+	  lastLin = b
+	  this.size+=1
 			
 	  if (this.size>2*max_buckets){
-		val ind = index.remove();
-		println("removed "+ind.lb.h.left.x+" "+ind.err);
-		val bprev = ind.lb.prev;
-		val b1 = ind.lb;
-		val b2 = ind.lb.next;
+		val ind = index.remove()
+		println("removed "+ind.lb.h.left.x+" "+ind.err)
+		val bprev = ind.lb.prev
+		val b1 = ind.lb
+		val b2 = ind.lb.next
 
-		val merged = new LinearBucket(b1.h.merge(b2.h));
+		val merged = new LinearBucket(b1.h.merge(b2.h))
 		//merged.h_$eq(b1.h().merge(b2.h()));
 		if (bprev == null)
-		  firstLin = merged;
+		  firstLin = merged
 		else
-		  bprev.next_$eq(merged);
+		  bprev.next=merged
 		if (b2.next!=null)
-		  b2.next.prev_$eq(merged);
+		  b2.next.prev=merged
 		else
 		  lastLin = merged;
-	    merged.next_$eq(b2.next);
-		merged.prev_$eq(bprev);
+	    merged.next=b2.next
+		merged.prev=bprev
 
 		if (bprev!=null){
-		  index.remove(new Index(0d,bprev));
+		  index.remove(new Index(0d,bprev))
 		}
-		index.remove(new Index(0d,b2));
+		index.remove(new Index(0d,b2))
 				
 	    if (bprev!=null){
-		  index.add(new Index(merged.getErrorMerge(),bprev));
+		  index.add(new Index(merged.getErrorMerge(),bprev))
 		}
 		if (merged.next!=null){
-		  index.add(new Index(merged.next.getErrorMerge(),merged));				
+		  index.add(new Index(merged.next.getErrorMerge(),merged))				
 		}
 	}
 				
-	  i+=data.interval;
+	  i+=data.interval
 		
 	}
   }
 	
   def generateDistribution(angle:Double,slp:Int,boostBucket:Boolean=false)={
 	var bit=firstLin
-	val d= new Distribution("",angle);				
+	val d= new Distribution("",angle,data.typeData);				
 	do {
 	  bit.lr=null
 	  bit.regression(bit.h)
@@ -110,8 +108,7 @@ class PwlhSummary(data:Series,bucketsPerDay:Int) extends Summary(data,bucketsPer
 	  else d.add(slope,1)
 	  bit = bit.next
 	}while (bit!=null)
-    //println(d.values);
-		
+    //println(d.values);		
 	d 
   }
 	
@@ -120,14 +117,14 @@ class PwlhSummary(data:Series,bucketsPerDay:Int) extends Summary(data,bucketsPer
 }
 
 object PwlhSummary {
-  private val maxMult = 500*1000000L
+  private val maxMult = 50*1000000L
   def apply(data:CsvSeries,buckets:Int) = {
     //println("heck"+data.period*data.maxCount*buckets.toLong)
     if (data.period*data.maxCount*buckets.toLong>maxMult){
       val f =  data.period*data.maxCount*buckets.toLong/maxMult
       val per = sqrt(maxMult*data.interval/(f*24*60*buckets)).toInt
       println ("new period "+per)
-      new PwlhSummary(new CsvSeries(data.index,data.filename,per,0),buckets)
+      new PwlhSummary(new CsvSeries(data.index,data.filename,per,0,data.typeData),buckets)
     }
     else
       new PwlhSummary(data,buckets)      

@@ -4,7 +4,7 @@ import au.com.bytecode.opencsv.CSVReader
 import scala.io.Source
 import scala.collection.JavaConversions._
 
-abstract class Series(index:Int) {
+abstract class Series(index:Int,val typeData:String) {
   var max:Double = 0
   var min:Double = Double.PositiveInfinity	
   var closed=false	
@@ -21,7 +21,7 @@ abstract class Series(index:Int) {
   def stream:Stream[Double]
 }
 
-class CsvSeries(val index:Int,val filename:String,initPeriod:Int,startVal:Int=0) extends Series(index) {
+class CsvSeries(val index:Int,val filename:String,initPeriod:Int,startVal:Int=0,typeData:String) extends Series(index,typeData) {
   val r = """###(\d+)""".r
   val s =  Source.fromFile(filename)
   override val interval=s.getLine(1) match {  
@@ -63,5 +63,5 @@ class CsvSeries(val index:Int,val filename:String,initPeriod:Int,startVal:Int=0)
 }
 
 object CsvSeries {
-  def apply(filepath:String) =new CsvSeries(0,filepath,0,0)
+  def apply(filepath:String,typeData:String) =new CsvSeries(0,filepath,0,0,typeData)
 }
