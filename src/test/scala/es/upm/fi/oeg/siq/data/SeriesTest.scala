@@ -21,9 +21,12 @@ import java.io.FileWriter
 import java.io.InputStream
 import es.upm.fi.oeg.siq.data._
 import es.upm.fi.oeg.siq.profile.SensorProfiler._
+import es.upm.fi.oeg.siq.profile.SwissExDataset._
 import scala.collection.mutable.ArrayBuffer
 import es.upm.fi.oeg.siq.data.compr.PwlhSummary
 import es.upm.fi.oeg.siq.data.compr.LinearSummary
+import es.upm.fi.oeg.siq.profile.AemetDataset
+import es.upm.fi.oeg.siq.profile.PachubeDataset
 
 
 //@RunWith(classOf[JUnitRunner])
@@ -36,15 +39,35 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
     sb = new StringBuilder("ScalaTest is ")
     lb = new ListBuffer[String]
   }
-  
+  /*
   @Test@Ignore
   def testPachube(){
     val f = new Feed(6895)
     val d = new Datastream(f,3)
     val dt = new DateTime(2011,1,1,0,0,0,0,DateTimeZone.UTC)
     (1 to 90) foreach(a=>export(d,"c:/pachube"+f.feedId+"_"+d.id+".csv",dt+a.days))   
-  }
+  }*/
   
+  @Test
+  def loadSeries{
+    val p=temp
+    val i=44
+    
+    val t1=System.currentTimeMillis
+    val s1=CsvSeries(p._1+i+".csv",p._3)
+    s1.normalized.foreach(_.toString)
+    val t1e=System.currentTimeMillis-t1
+
+    val t2=System.currentTimeMillis
+    val s2=CsvSeries(p._1+i+".csv",p._3)
+    s2.normalized.foreach(_.toString)
+    val t2e=System.currentTimeMillis-t2
+    
+    println(t1e+"--"+t2e)
+    
+    
+  }
+  /*
   def export(d:Datastream,filename:String,dt:DateTime)={
     val data = d getData(dt,DataFormat.Csv)
     val it = Source.fromInputStream(data) getLines
@@ -52,7 +75,7 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
     it.foreach(a=>out.write(a+"\n"))
     out.close
     data.close
-  }
+  }*/
 
   @Test
   def verifyEasy() { // Uses ScalaTest assertions
@@ -73,19 +96,36 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
   
   @Test
   def testCompare(){
+    val p = PachubeDataset.propsMap("unknown")
+    val old=System.currentTimeMillis
+    //val ss = new CsvSeries(0,dataPath+p._1+1+".csv",0,0,p._3)
+    //ss.stream.foreach(a=>a.toString())//println("datas: "+a))
     val strs = new ArrayBuffer[String]
     val percs = new ArrayBuffer[List[Double]]
-    (13 to 13).foreach(i=>{
-    val summ = PwlhSummary(new CsvSeries(0,dataPath+humidity._1+i+".csv",0,0,humidity._3),2)
+    
+    //(1 to 1).foreach{j=>
+      (25 to 25).foreach(i=>{
+    val summ = new PwlhSummary(new CsvSeries(1,PachubeDataset.dataPath("unknown","46126_Temperature"),0,0,p._3),0.052083333333333336)
     
     //println(summ.data.toString())
     
     summ.pwlh
     val d = summ.generateDistribution(Pi/12,20,false)
     percs+=d.percentages.toList
-    strs+=(summ.toString) })
+    strs+=(summ.toString) 
+    /*
+    val ss = CsvSeries(dataPath+p._1+1+".csv",p._3)
+    ss.stream.foreach{
+      a=>println(a.left.x+";"+summ.computeValue(a.left.x))
+    } */
+
+    
+    })
+    //}
+    println("elapsed: "+(System.currentTimeMillis-old).toString)
     strs.foreach(a=>println("thingy:"+a))
     percs.foreach(println)
+    
     /*
     load
     val sp = compare(2,12,d)
@@ -95,7 +135,7 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
 
   @Test
   def testLinearAppr(){
-    val summ = new LinearSummary(new CsvSeries(0,dataPath+temp._1+"14.csv",10,0,humidity._3),2)
+    val summ = new LinearSummary(CsvSeries(temp._1+"14.csv",humidity._3),0.2)
     
     println(summ.data.toString())
     summ.linearApprox

@@ -9,6 +9,12 @@
     <artifactId>jersey-client</artifactId>
     <version>1.8</version>
 	</dependency>
+	<dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>1.7.1</version>
+      <scope>compile</scope>
+    </dependency>
   <dependency>
   	<groupId>net.sf.opencsv</groupId>
 		<artifactId>opencsv</artifactId>
@@ -58,6 +64,18 @@
     <artifactId>weka</artifactId>
     <version>3.6.2</version>
 	</dependency>
+	<dependency>
+    <groupId>com.weiglewilczek.slf4s</groupId>
+    <artifactId>slf4s_2.9.1</artifactId>
+    <version>1.0.7</version>
+</dependency>
+	<dependency>
+		<groupId>org.slf4j</groupId>
+		<artifactId>slf4j-log4j12</artifactId>
+		<version>1.6.4</version>
+		<type>jar</type>
+		<scope>compile</scope>
+	</dependency>
   </dependencies>
 <build>
 	<sourceDirectory>src/main/scala</sourceDirectory>
@@ -78,6 +96,13 @@
   </plugins>
  </build>
  <repositories>
+   <repository>
+     <id>scala-tools</id>
+     <releases>
+       <enabled>true</enabled>
+     </releases>
+     <url> http://scala-tools.org/repo-releases/</url>
+   </repository>
    <repository>
      <id>weka</id>
      <releases>

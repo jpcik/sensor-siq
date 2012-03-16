@@ -11,6 +11,7 @@ import weka.core.Instance
 class LinearBucket(val h:Hull) {
   var next:LinearBucket=_
   var prev:LinearBucket=_
+  var points:List[Point]=Nil
   var lr:SimpleLinearRegression=_
 
   def regression(hull:Hull) {
@@ -39,6 +40,10 @@ class LinearBucket(val h:Hull) {
 	m.points.map(p=> abs(p.y-(lr.getIntercept+p.x*lr.getSlope))) max
   }
 	
+  def totalErrorSqrSum={
+    points.map(p=>pow(p.y-getValue(p.x),2)).sum
+  }
+  
   def getMagnitude()=
 	sqrt(pow(h.right.x-h.left.x, 2)+pow(getValue(h.right.x)-getValue(h.left.x),2))
   

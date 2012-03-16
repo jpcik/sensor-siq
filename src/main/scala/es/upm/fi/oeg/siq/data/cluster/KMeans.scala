@@ -38,9 +38,9 @@ class KMeans[T<:Means](val k:Int,val data:Seq[T]) {
   def cluster={
     val newClusters=(0 until k).map(a=>new ArrayBuffer[T])//new Array[ArrayBuffer[T]](k)
     clusters.foreach(c=>c.set.foreach(i=>newClusters(nearestMean(i)._2)+=i))
-    clusters.foreach(c=>println(c.mean))
+    //clusters.foreach(c=>println("old means: "+c.mean.mkString))
     clusters=newClusters.map(c=>new Cluster(c))
-    clusters.foreach(c=>println(c.mean))
+    //clusters.foreach(c=>println("new means: "+c.mean.mkString))
     //clusters.foreach(c=>println("mean "+c.mean.mkString))
   }
   def same(c1:Iterable[Cluster[T]],c2:Iterable[Cluster[T]])=

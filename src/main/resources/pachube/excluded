@@ -1,0 +1,19 @@
+
+test:
+12732:0(Wind Speed);1(Wind Direction);2(Air Temperature);3(Relative Humidity);4(Pressure);5(Solar Radiation);6(Last 15 Min Rainfall);7(Accumulated Rainfall Since 9AM);8(Rainfall Duration);9(Internal Temperature);10(Supply Voltage)
+2056:0(temperature Inside);1(temperature Outside);6(temperature wind chill);7(humidity Inside);8(humidity Outside);13(pressure);14(wind speed);15(wind bearing);16(rain in last hour)
+44037:Humidity(Humidity);Pressure(Pressure);Rainfall-Rate(Rainfal Rate);Rainfall-Today(Rainfall Today);Temperature(External Temperature);Wind-Speed(Wind Speed)
+30238:0(temp_in);1(temp_out);2(dewpoint);3(rel_hum_in);4(rel_hum_out);5(windspeed);6(wind_angle);8(wind_chill);9(rain_1h);10(rain_24h);11(rain_total)
+28680:hk650(temperatur);hk651(luminosity, S, sun);hk652(luminosity, sun, W);hk653(E, luminosity, sun);hk654(luminosity, SE, sun);hk655(luminosity, sun, SW);hk656(ESW, luminosity, sun);hk657(dawn);hk658(light);hk659(wind);hk660(rain)
+21544:0(temperature);1(light);2(humidity);3(noise);4(carbon dioxide);5(carbon monoxide);6(air quality)
+12623:0(Température Externe);1(Pression Relative);2(Humidité Externe);3(Rafale de Vent);4(Pluie);5(Température Interne)
+26118:0(temperature);1(light);2(humidity);3(noise);4(carbon dioxide);5(carbon monoxide);6(air quality)
+
+
+
+out:
+28485:85121();85641(piscine);87931(air exterieur)
+42803:chickencam1-avg_html_retrieval();chickencam1-poll_failure_rate();chickencam2-avg_html_retrieval();chickencam2-poll_failure_rate();coop_door-avg_html_retrieval();coop_door-Camera_Motion(motion);coop_door-lightlevel(light);coop_door-poll_failure_rate();coop_sensors-Air_Flow(airflow);coop_sensors-Audio(audio);coop_sensors-avg_html_retrieval();coop_sensors-Dew_Point(dewpoint, weather);coop_sensors-Door_Sensor_egg_door(door);coop_sensors-Humidity(humidity, weather);coop_sensors-poll_failure_rate();coop_sensors-Temperature(temp, weather);daytime();equipment_sensors-Air_Flow(airflow);equipment_sensors-Audio(audio);equipment_sensors-avg_html_retrieval();equipment_sensors-Dew_Point(dewpoint, weather);equipment_sensors-Humidity(humidity, weather);equipment_sensors-poll_failure_rate();equipment_sensors-Temperature(temperature, weather);floor_left-avg_html_retrieval();floor_left-Camera_Motion(motion);floor_left-lightlevel(light);floor_left-poll_failure_rate();floor_right-avg_html_retrieval();floor_right-Camera_Motion(motion);floor_right-lightlevel(light);floor_right-poll_failure_rate();roost_box-lightlevel(light);roost_cam-avg_html_retrieval();roost_cam-Camera_Motion(motion);roost_cam-poll_failure_rate();run_sensor-Air_Flow(airflow);run_sensor-Audio(audio)
+36962:0(??);1(??);2(??);3(???10-700?);4(???);5(??);6(??);7(??);8(??2(100kMax));9(??3(0.001Min));10();11();12()
+
+

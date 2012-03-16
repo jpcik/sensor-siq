@@ -5,6 +5,7 @@ import org.scalatest.prop.Checkers
 import org.junit.Test
 import es.upm.fi.oeg.siq.data.cluster.KMeans
 import es.upm.fi.oeg.siq.profile.SensorProfiler._
+import es.upm.fi.oeg.siq.profile.SwissExDataset._
 import scala.math._
 import au.com.bytecode.opencsv.CSVReader
 import scala.io.Source
@@ -13,9 +14,9 @@ class PwlhTest extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
   @Test def testClusterDistribution{
     //val dists=((1 to 35).toList--List(2,18,21,22,34,35)).map(i=>{
     val dists=(1 to 15).map(i=>{
-      val csv = new CSVReader(Source.fromFile(resultPath+humidity._1+i+".csv").bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
+      val csv = new CSVReader(Source.fromFile(rootPath+humidity._1+i+".csv").bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
       Stream.continually(csv.readNext()).takeWhile(_!=null).map(a=>{
-        val d=( Distribution(temp._3+i+a(0)+"-"+a(1), a(1).toInt, a(2).dropRight(1).drop(5).split(",").map(_.toDouble),temp._3))       
+        val d=( Distribution(temp._3+i+a(0)+"-"+a(1), a(1).toInt,0,0, a(2).dropRight(1).drop(5).split(",").map(_.toDouble),temp._3,0))       
         d
       }).filter(d=>d.name.endsWith("2-12")).first
     })

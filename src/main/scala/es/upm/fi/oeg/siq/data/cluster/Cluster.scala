@@ -6,7 +6,7 @@ import scala.collection.mutable.ArrayBuffer
 class Cluster[T<:Means](val set:Seq[T]) {
   //val utils=set.first.companion
   val mean=if(set.isEmpty) {println("empty");new EmptyMeans()} else  set.first.companion.means(set) 
-  def mkString=set.toList.map(a=>a.mkString+":"+a.distance(mean))
+  def mkString=set.toList.map(a=>a.mkString)//+":"+a.distance(mean))
   def ==(c:Cluster[T])=set.zip(c.set).forall(a=>a._1==a._2)
 }
 

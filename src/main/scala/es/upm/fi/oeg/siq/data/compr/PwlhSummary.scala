@@ -5,41 +5,91 @@ import scala.math._
 import scala.util.Random
 import scala.collection.mutable.ArrayBuffer
 import es.upm.fi.oeg.siq.data._
+import com.weiglewilczek.slf4s.Logging
+import es.upm.fi.oeg.siq.data.CsvSeries$
+import au.com.bytecode.opencsv.CSVWriter
+import java.io.FileWriter
+import au.com.bytecode.opencsv.CSVReader
 
-abstract class Summary(val data:Series,val bucketsPerDay:Int){
-  val max_buckets = (data.period*bucketsPerDay).toInt
-  if (max_buckets<1) throw new IllegalArgumentException("Invalid period: "+data.period+ " and buckets: "+bucketsPerDay)
+abstract class Summary(val data:Series,val compression:Double) extends Logging{
+  val max_buckets = (data.maxCount*compression).toInt
+  if (max_buckets<1) 
+    throw new IllegalArgumentException("Too few data: "+data.maxCount+ " for compression: "+compression)
+  if (max_buckets>=data.maxCount/2) 
+    throw new IllegalArgumentException("Too many buckets: "+max_buckets+ " insuff compression: "+compression)
 }
 
-class PwlhSummary(data:Series,bucketsPerDay:Int) extends Summary(data,bucketsPerDay){
-  var size = 0
+class PwlhSummary(data:Series,compression:Double) extends Summary(data,compression){
+  private val bucketlimit=min(10,max_buckets)
+  val chuncks=(max_buckets)/bucketlimit
+  //val chuncks=(max_buckets/data.asInstanceOf[CsvSeries].step)/bucketlimit
+  val interval = //if (data.maxCount*compression>bucketlimit)
+  //  data.period*24*60*compression/bucketlimit
+  //else 
+    data.datainterval
+  private val dataSize=data.maxCount/(interval/data.datainterval).toInt//data.period*24*60/interval  
+  private var size=0
   var firstLin:LinearBucket=_
   var lastLin:LinearBucket=_
   val index = new PriorityQueue[Index](10,new IndexComparator)
-  println("data "+data.toString() )
+  println("data "+toString() )
+  println("bucketlim: "+ bucketlimit)
+  println("chunks: "+chuncks)
+  
+  
+  private lazy val buckets={
+   var b:LinearBucket=null
+   Stream.continually{
+     if (b==null) {b=firstLin;firstLin}
+     else {b=b.next;b}
+     }.takeWhile(a=>a!=null) 
+  }
+  
+  def computeValue(time:Double)={
+    val bucks=buckets.filter(b=>time>=b.h.left.x && time<=b.h.right.x)
+    if (bucks.isEmpty)
+      throw new Exception("no value for time: "+time)
+    val lb=bucks.first
+    logger.debug("getting value "+time)
+    lb.getValue(time)
+  }
+  
   def getError()={
-	var sum = 0d
-	var count=0
+	//var sum = 0d
+    if (firstLin==null) Double.NaN
+    else
+    {
+	//var count=0
+	sqrt(buckets.map(_.totalErrorSqrSum).sum/data.maxCount)
+    //val rdata=data.asInstanceOf[CsvSeries].reset
+	//val sum=rdata.stream.map(h=>pow(h.left.y-computeValue(h.left.x),2)).sum
+	
+	/*
 	var lb=firstLin
 	while (lb!=lastLin){
 	  sum+=lb.getErrorSqrSum
 	  lb=lb.next;
 	  count+=lb.h.size
-	}			
-	sqrt(sum/count)
+	}*/			
+	//sqrt(sum/rdata.count)}
+    }
   }
 	
-  def pwlh() {
+  def pwlh {
 	size=0
 	lastLin=null
 	firstLin=null
-	var o:Option[Double]=None
-	var i=0d
-	while ({o=data.next;o.isDefined}){
-	  println("Data: "+o+ " Buckets: "+this.size+" "+max_buckets)
-	  val p = new Point(i,o.get)
+	var o:Option[Point]=None
+	//var i=0d
+	var c=0
+	//while ({o=data.next;o.isDefined}){
+	data.asInstanceOf[CsvSeries].normalized.foreach{p=>
+	  logger.trace("Data: "+o+" Buckets: "+this.size+" "+max_buckets)
+	  //println("Data: "+o+ " Buckets: "+this.size+" "+max_buckets)
+	  //val p = new Point(i,o.get)
 	  val b = new LinearBucket(Hull(p))			
-					
+	  b.points=List(p)//o.get.points.toList	
+	  
 	  b.next=null
 	  b.prev=lastLin
 	  if (b.prev!=null)
@@ -51,16 +101,18 @@ class PwlhSummary(data:Series,bucketsPerDay:Int) extends Summary(data,bucketsPer
 	  if (firstLin == null)
 		firstLin = b
 	  lastLin = b
-	  this.size+=1
-			
-	  if (this.size>2*max_buckets){
+	  this.size+=1//b.h.size
+	  
+	  if (this.size>bucketlimit){
 		val ind = index.remove()
-		println("removed "+ind.lb.h.left.x+" "+ind.err)
+		logger.trace("removed "+ind.lb.h.left.x+" "+ind.err)
 		val bprev = ind.lb.prev
 		val b1 = ind.lb
 		val b2 = ind.lb.next
 
 		val merged = new LinearBucket(b1.h.merge(b2.h))
+		merged.points=b1.h.points.toList:::b2.h.points.toList
+		//logger.debug("merged: "+merged.h.mkString)
 		//merged.h_$eq(b1.h().merge(b2.h()));
 		if (bprev == null)
 		  firstLin = merged
@@ -84,16 +136,45 @@ class PwlhSummary(data:Series,bucketsPerDay:Int) extends Summary(data,bucketsPer
 		if (merged.next!=null){
 		  index.add(new Index(merged.next.getErrorMerge(),merged))				
 		}
-	}
+	  }
 				
-	  i+=data.interval
-		
+	  //buckets.foreach(b=>logger.debug("bucket: "+b.h.mkString))
+	  //i+=interval
+	  c+=1
+	  //i=c*interval
+      if (chuncks>1 && size==(data.maxCount)/chuncks){
+        logger.trace("Reset index: "+size)
+        index.clear
+        size=0
+      }	
 	}
+  }
+  
+  
+  def export(bucketPerDay:Int,filename:String){
+	val w = new CSVWriter(new FileWriter(filename+"_params.csv"),';',CSVWriter.NO_QUOTE_CHARACTER)
+	val wd = new CSVWriter(new FileWriter(filename+"_data.csv"),';',CSVWriter.NO_QUOTE_CHARACTER)
+	w.writeNext(Array(data.toString))
+    
+    val summary=buckets.foreach{b=>
+      //println("slopesss")
+      //b.regression(b.h)
+      wd.writeNext(Array(b.h.left.x.toString,b.getValue(b.h.left.x).toString))
+      wd.writeNext(Array(b.h.right.x.toString,b.getValue(b.h.right.x).toString))
+
+      w.writeNext(Array(b.lr.getSlope.toString,b.lr.getIntercept.toString,
+          b.h.left.x.toString,b.h.right.x.toString))
+      
+      }
+	w.writeNext(Array("summary",toString))
+	//w.writeNext(Array(summary.mkString))
+	w.close
+	wd.close
   }
 	
   def generateDistribution(angle:Double,slp:Int,boostBucket:Boolean=false)={
 	var bit=firstLin
-	val d= new Distribution("",angle,data.typeData);				
+	val d= new Distribution("",angle,data.period,data.datainterval,data.typeData,0);				
 	do {
 	  bit.lr=null
 	  bit.regression(bit.h)
@@ -112,21 +193,19 @@ class PwlhSummary(data:Series,bucketsPerDay:Int) extends Summary(data,bucketsPer
 	d 
   }
 	
-  override def toString= data.toString+" error:"+getError+";"+getError/(data.max-data.min)
-
+  override def toString={
+    val d = data.asInstanceOf[CsvSeries]
+    "interval "+interval+
+                 ";compression "+compression+
+                 data.toString+
+                 "; error "+getError+
+                 ";"+getError/(d.mean+d.stdev)//((data.max-data.min))///d.stdev)
+  }
 }
 
 object PwlhSummary {
   private val maxMult = 50*1000000L
-  def apply(data:CsvSeries,buckets:Int) = {
-    //println("heck"+data.period*data.maxCount*buckets.toLong)
-    if (data.period*data.maxCount*buckets.toLong>maxMult){
-      val f =  data.period*data.maxCount*buckets.toLong/maxMult
-      val per = sqrt(maxMult*data.interval/(f*24*60*buckets)).toInt
-      println ("new period "+per)
-      new PwlhSummary(new CsvSeries(data.index,data.filename,per,0,data.typeData),buckets)
-    }
-    else
+  def apply(data:CsvSeries,buckets:Double)={
       new PwlhSummary(data,buckets)      
   }
 }

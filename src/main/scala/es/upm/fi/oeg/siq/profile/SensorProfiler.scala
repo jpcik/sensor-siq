@@ -10,50 +10,26 @@ import scala.collection.mutable.HashMap
 import es.upm.fi.oeg.siq.data.compr.PwlhSummary
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.immutable.VectorIterator
+import es.upm.fi.oeg.siq.data.compr.PwlhSummary$
+import java.util.TreeMap
+import java.io.File
+import es.upm.fi.oeg.siq.data.cluster.KMeans
+import com.weiglewilczek.slf4s.Logging
 
-object SensorProfiler {
-  val dataPath = "g:/doc/semint/SensorAnnotation/benchmark/"
-  val resultPath = "g:/doc/semint/SensorAnnotation/result/"
-  val temp = ("Temperature/temperature_",70,"temperature")//78)
-  val co2 = ("CO2/co2_",11,"co")//11)
-  val humidity = ("Humidity/humidity_",30,"humidity")
-  val lysimeter = ("Lysimeter/Lysimeter",12,"lysimeter")
-  val moisture = ("Moisture/Moisture",20,"moisture")
-  val pressure = ("Pressure/pressure_",4,"pressure")
-  val radiation = ("Radiation/radiation_",30,"radiation")
-  val snowheight = ("Snow_height/snow_height_",4,"snowheight")
-  val voltage = ("Voltage/voltage_",16,"voltage")
-  val windspeed = ("Wind_speed/wind_speed_",40,"windspeed")
-  val props = Array(temp,co2,humidity,lysimeter,moisture,radiation,snowheight,voltage,windspeed)
+object SensorProfiler extends Logging{
+  
+  val ds:SensorDataset=SwissExDataset//new MixedDataset(AemetDataset,PachubeDataset)//AemetDataset//SwissExDataset
+  val testds=SwissExDataset
+  println (util.Random.shuffle((1 to 4).toList))
+  val ranges=ds.props.map{p=>
+    val div=2
+    val list=util.Random.shuffle((1 to p._2).toList)
+    val gsize=if(list.size%div==0) list.size/div else (list.size/div+1)
+    p._3 -> list.grouped(gsize).toList}.toMap // list.tak(list.take(p._2/2),list.drop(p._2/2))}.toMap
   
   val truth = new HashMap[String,Distribution]
-  
-  def generate = {
-    props foreach (prop =>
-	  (prop._2/2+1 to prop._2).foreach(i =>{
-	  //(13 to 20).foreach(i =>{  
-	    val w = new CSVWriter(new FileWriter(resultPath+prop._1+i+".csv"),',',CSVReader.DEFAULT_QUOTE_CHARACTER)
-	    (0 to  2).map(pow(2,_).toInt).foreach(buckets=> {
-	      val data = new CsvSeries(0,dataPath+prop._1+i+".csv",0,0,prop._3)	
-	      try{
-	      val comp =  PwlhSummary(data,buckets);
-	      if (comp.max_buckets<data.maxCount/4 ) {
-	    	println("Bucket size: "+comp.max_buckets+". PerDay: "+buckets )
-	    	comp.pwlh
-	        (1 to 6).map(_*4) foreach (a=> {
-	          val dis = comp.generateDistribution(Pi/a,20,false)
-	          w.writeNext(Array(buckets.toString,a.toString,""+dis.percentages,comp.toString))
-	        })
-	      }
-	      } catch{
-	        case e:Exception=>println("Exception: "+e)
-	      }
-	    })
-	    w.close
-	  })
-    )
-  }
-  
+  val alldists=new ArrayBuffer[Distribution]          
+      
   def addTruth(name:String,d:Distribution){//prop:String,buckets:Int,angleFrac:Int,d:Distribution){
     val key = name//prop+buckets+"-"+angleFrac
     truth.get(key) match {
@@ -67,97 +43,199 @@ object SensorProfiler {
   }
   
   def compare(buckets:Int,angleFrac:Int,d:Distribution)={
-    val cosito = filterTruth(buckets,angleFrac).map(b=>{
-      //println(b._2.percentages) 
-      //println(d.percentages)
-      val s = (b._2.jeffrey(d),b._2.typeData)
-      //println(b._1+";"+b._2.euclidean(d)+";"+b._2.jeffrey(d)+";"+b._2.cosine(d))
+    val fact=4d
+    val cosito = //filterTruth(buckets,angleFrac).map(b=>{
+      filter(buckets,angleFrac,d.name).map(b=>{
+      val s = (b.euclidean(d),b.typeData,b.name,b.error)
       s
-          //b._2.cosine(d)+
-          //";"+";"+b._2.chisquare(d)+";"+b._2.cumulEuclidean(d))
-      //println(b._2.values.values) 
-      //println(b._2.cumulative)
-      
-    }).filter(_._1<0.1).toList.sortBy(_._1).take(1)
-    cosito
+    }).filter(_._1<50).filter(_._4<500).toList.sortBy(t=>(t._1)).take(5)
+    cosito.foreach(t=>println(t+ds.getTags(t._3.drop(7).split('-')(0)).mkString))
+    val gr=cosito.groupBy(s=>s._2).map{g=>
+      //(g._2.size+(1/g._2.min._1)*4*g._2.size/(ds.propsMap.get(g._1).get._2/fact),g._2)
+      (g._2.size,g._2)
+    }.toList.sortBy(_._1).reverse
+    gr.foreach(println(_))
+    var mx=0
+    if (gr.isEmpty)
+      List()
+    else
+      gr.first._2.take(1)
     
   }
   
-  type Score = (Double,String)
-  class ProfileMatch(val name:String,val scores:Seq[Score]){
-    
+  def loadDistributions(dss:SensorDataset,name:String,i:String)={
+    val path=dss.distPath(name,i)
+    logger.trace(path)//+i+".csv")
+    val f=new File(path)//+i+".csv")
+    val s=Source.fromFile(f).bufferedReader.readLine()
+    if (f.exists() && s!=null)
+    {
+    val period=s.split(';')(3).drop(8).toDouble
+    val interval=s.split(';')(2).drop(9).toDouble
+    val csv = new CSVReader(Source.fromFile(path).bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
+    var dname =""
+    var bck=0
+    var ang=0
+    var values:Array[Double]=null
+    val dists=new  ArrayBuffer[(Distribution, Int,Int)] 
+    Stream.continually(csv.readNext()).takeWhile(_!=null).foreach{a=>  //filter(_(0).equals("dist")).map(a=>{
+      if (a(0).equals("dist")){
+        dname=name+i+"-"+a(1)+"-"+a(2)
+        bck=a(1).toInt
+        ang=a(2).toInt
+        values=a(3).dropRight(1).drop(1).split(",").map(_.toDouble/(period/1d))
+      }
+      else if (a(0).startsWith("interval")){
+        val err=a(0).split(';').last.toDouble
+        dists+=((Distribution(dname,ang,period,interval,values,name,err),bck,ang))
+      }
+      else if (a(0).startsWith(";maxCount")){}
+      else {
+        val symbs=a(0)
+        dists.last._1.symbols.++=(symbs.toList)
+      }
+      /*val d=Distribution(name+i+"-"+a(1)+"-"+a(2), a(2).toInt,period,interval, 
+          a(3).dropRight(1).drop(1).split(",").map(_.toDouble/period),name,)
+      (d,a(1).toInt,a(2).toInt)  })*/
+    }
+    //println("sizo"+dists.length)
+    Some(dists)
+    }
+    else None
   }
-  
-  def loadDistributions(name:String,path:String,i:Int)={
-    val csv = new CSVReader(Source.fromFile(path+i+".csv").bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
-    Stream.continually(csv.readNext()).takeWhile(_!=null).map(a=>{
-      val d=Distribution(name+i+a(0)+"-"+a(1), a(1).toInt, a(2).dropRight(1).drop(5).split(",").map(_.toDouble),name)
-      (d,a(0).toInt,a(1).toInt) })
-  }
     
-  
-  def load = {
-    props foreach (prop=>
-      (1 to prop._2/2).foreach(i=>{
-      //(1 to 1).foreach(i=>{
-        //val csv = new CSVReader(Source.fromFile(resultPath+prop._1+i+".csv").bufferedReader,',',CSVReader.DEFAULT_QUOTE_CHARACTER)
-        //Stream.continually(csv.readNext()).takeWhile(_!=null).foreach(a=>{
-         // val d=Distribution(prop._3+i, a(1).toInt, a(2).dropRight(1).drop(5).split(",").map(_.toDouble))
-        loadDistributions(prop._3,resultPath+prop._1,i).foreach{
-          case (d,buckets,angleFrac)=> addTruth(prop._3+buckets+"-"+angleFrac,d) }
-         //println("dist"+d.values.values())  }
+  def filter(b:Int,a:Int,name:String)={
+    logger.trace(b+";"+a+";"+name)
+    //val r = ("""(\w)-"""+b+"""-"""+a).r
+    //val r = ("""(\S+)-"""+b+"""-"""+a).r
+    val r = ("""(\S+)-"""+"""(\d)+"""+"""-"""+a).r
+    //val exact = (name).r
+    //truth.filter(a=>a._1 match {case r(s) => true; case _ => false })
+    alldists.filterNot(_.name.equals(name))
+    /*.filter(d=>d.name match {
+    
+      case r(s) => true; case _ =>  println(d.name); false
+    })*/
+  }
+  def load(group:Int) = {
+    ds.props foreach {prop=>
+      val indexes=if (group == -1) (1 to prop._2) else{
+      println(ranges(prop._3))
+      println(ranges(prop._3).splitAt(group))
+      val (start,_::end)=ranges(prop._3).splitAt(group)      
+      (start:::end).reduceLeft(_:::_)}
+      indexes.foreach(i=>{
+      //(1 to prop._2).foreach(i=>{
+        val ll=loadDistributions(ds,prop._3,ds.getCode(prop._3,i))
+        if (ll.isDefined)
+        ll.get.foreach{
+          case (d,buckets,angleFrac)=> {
+             
+          println(d.name+";"+ d.values.values)
+          //if (buckets==buck(d.interval)){
+          println(d.name+";"+ d.values.values)
+          alldists+=d}
+          //}
+          }
       })
-    )
+    }
     
+    if (false){
+   val km=new KMeans[Distribution](12,alldists)
+    var c1=km.clusters
+    c1.foreach(a=>println("initial cluster "+a.mkString))
+    val clust=Stream.continually{km.cluster;km.clusters.foreach(a=>println(a.mkString)); km.clusters}.take(10).last
+    clust.foreach(a=> println(a.set.size+"--- "+a.mkString))
+    }
   }
   
-  def main(args: Array[String]): Unit = {
-    //generate
-    //load
-    if (false){            
-    truth.foreach(a=>println(a._1+" "+ a._2.percentages))
-    val testProps=Array(snowheight,co2,humidity,lysimeter,moisture,radiation,temp,voltage, windspeed)
-    val buckets = 4
-    val angleFrac = 24
+  def buck(interval:Double)=
+  if (interval<1) 500 else if ( interval>=1 && interval <5) 50 else 5
+      
+  def findmatch(group:Int)={
+    val testProps=testds.props.filter(!_._3.equals("unknown"))//Array(testds.propsMap("temperature"))//humidity,lysimeter,moisture,radiation,snowheight,co2,temp,voltage, windspeed,winddir)
+    val buckets = 5
+    val angleFrac = 8
     var tot = 0
     var fp = 0d
     var fn = 0d
     var tp = 0d
     var tn = 0d
-    testProps.foreach{prop=>
-    (prop._2/2+1 to prop._2).foreach{i=>
-      val dist=loadDistributions(prop._3,resultPath+prop._1,i).filter{
-        case (d,b,af)=> (b==buckets && af==angleFrac)}.first._1
-      //val summ = PwlhSummary(new CsvSeries(0,dataPath+prop._1+i+".csv",0,0),buckets)
-      //summ.pwlh
-      //val summ = new LinearSummary(CsvSeries(dataPath+prop._1+i+".csv"),buckets)
-      //summ.linearApprox
-      //val d =summ.generateDistribution(Pi/angleFrac,20,false)
-      //println(prop._3)
-      println("Comparing "+dist.name)
-      val cmp = compare(buckets,angleFrac,dist)
-      cmp.foreach(s=>println(s._2+"("+s._1+")"))
-      println
-      if (cmp.exists(a=>a._2.equals(dist.typeData))) {
-        tp+=1
-        fp+=cmp.length-1
-      }
-      else {
-        fn+=1
-        fp+=cmp.length
-      }    
-      tot+=1
-        
+          
+    val matched=testProps.map{prop=>
+      val propMat = new HashMap[String,Int]
+      ds.props.foreach(a=>propMat.put(a._3,0))
+      val indexes=if (group == -1) (1 to prop._2)
+      else ranges(prop._3)(group)
+      indexes.foreach{i=>
+      //(1 to prop._2).foreach{i=>
+        //println("loading "+resultPath("all")+prop._1+i)
+        val disto=loadDistributions(testds,prop._3,testds.getCode(prop._3,i))  
+        if (disto.isDefined){
+          
+          val distlist=disto.get.filter{
+            case (d,b,af)=> (b==buck(d.interval)  && af==angleFrac)}
+          if (!distlist.isEmpty){  
+            //val dist=distlist.first._1
+
+           distlist.foreach{d=>
+             val dist=d._1
+           println("Comparing "+dist.name)
+           println("tags "+testds.getTags(testds.getCode(prop._3,i)).map(t=>t+" ").mkString)
+           val cmp = compare(buckets,angleFrac,dist)
+           if (!cmp.isEmpty)
+             propMat.put(cmp.first._2,propMat.get(cmp.first._2).get+1)
+           cmp.foreach(s=>println(s._3+"("+s._1+")"))
+           println
+           if (cmp.exists(a=>a._2.equals(dist.typeData))) {
+             tp+=1
+             fp+=cmp.length-1
+           }
+           else {
+             fn+=1
+             fp+=cmp.length
+           }    
+           tot+=1
+            }
       //println(d.percentages)
       //println(summ.toString())
     }}
+    }
+    println("results "+propMat) 
+    (prop._3,propMat)
+    }
     println("total: "+tot)
     println("false positives: "+fp)
     println("false negatives: "+fn)
     println("true positives: "+tp)
-    println("precision: "+(tp/(tp+fp)))
-    println("recall: "+tp/(tp+fn))
+    val pr=(tp/(tp+fp))
+    val rec=tp/(tp+fn)
+    println("precision: "+pr)
+    println("recall: "+rec)
     
+    matched.map(m=>(m._1,pr,rec,m._2))
+
+  }
+  
+  def main(args: Array[String]): Unit = {
+    //export
+    //loadshow
+    //DataGenerator.generate
+    //PachubeDataset.analyzeInterval
+    //PachubeDataset.analyzeInvalidData
+    
+    val dd=(-1 to -1).map{i=>
+      alldists.clear
+      load(i)
+      findmatch(i)      
+    //truth.foreach(a=>println(a._1+" "+ a._2.percentages))
+    }
+    
+    
+    dd.foreach{p=>
+      p.foreach{l=>
+       println(l._1+":::"+l._2+";"+l._3+";"+l._4) 
+      }      
     }
     
   }

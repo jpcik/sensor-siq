@@ -1,0 +1,12 @@
+46126:Humidity#humidity();Pressure#pressure();RainfallRate#precipitation();RainfallToday#precipitation();Temperature#temperature();WindSpeed#windspeed()
+39377:h1#humidity(humidity);t1#temperature(temp)
+29409:0#temperature(temperature);1#humidity(humidity);2#pressure(pressure);3#unknown(light);4#temperature(temperature);5#pressure(pressure)
+20161:0#temperature(Ambient Temperature);1#humidity(Humidity);2#unknown(Dewpoint);3#unknown(Cloudbase);4#pressure(Barometric Pressure)
+3037:9#temperature(temperature);26#precipitation(rain);22#unknown(water tank);10#temperature(shed temperature);24#temperature(pool temperature);40#unknown(Electricity Usage);201#windspeed(Wind Speed);202#unknown(Wind Gusts);203#winddir(Wind Direction);193#humidity(Humidity);181#pressure(Barometric Pressure);311#unknown(Geiger counter);611#unknown(Yard Noise);612#unknown(Yard Light);615#unknown(Jack Brakes);
+42753:0#temperature(Temperature);1#humidity(Humidity);2#pressure(Airpressure);3#windspeed(Windspeed);4#precipitation(Rainfall)
+45022:dewpoint#unknown(Dew Point);humidity#humidity(Humidity);percipitation#precipitation(Percipitation,Rain);pressure#pressure(Pressure);temperature#temperature(Temperature);winddir#winddir(Wind);windspeed#windspeed(Wind)
+45816:humidity#humidity(Finish,SHT11);pressure#pressure(BMP085,Jurytoren);temperature#temperature(Finish,SHT11)
+39921:1#temperature(temperature);2#humidity(humidity);3#pressure(barometer);4#windspeed(wind speed);5#winddir(wind direction);6#precipitation(rain_current);7#precipitation(rain_lastHour);8#precipitation(rain-24Hr);9#temperature(temperature_indoor);10#humidity(humidity_indoor)
+29222:Humidity#humidity(Humidity);Temperature#temperature(Temperature)
+43727:Humidity#humidity(Humidity);Pressure#pressure(Pressure);RainfallRate#precipitation(Rainfall Rate);RainfallToday#precipitation(Rainfall Today);Temperature#temperature(Temperature);WindSpeed#windspeed(Wind Speed)
+14769:0#temperature(TEMP);1#humidity(HUM);2#pressure(PRESS)

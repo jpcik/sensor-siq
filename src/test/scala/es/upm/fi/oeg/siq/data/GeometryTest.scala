@@ -57,6 +57,19 @@ class GeometryTest extends JUnitSuite with ShouldMatchersForJUnit with Checkers 
     m1.points(2) should be (pts(2))     
   }
 
+  @Test def testMergeAligned{
+    val h1 = new Hull(Array(new Point(0.1,67.4),new Point(0.2,67.7),new Point(0.23333333333333334,67.8),new Point(0.16666666666666666,67.6)))
+    val h2 = new Hull(Array(new Point(0.26666666666666666,67.8),new Point(0.3,67.9),new Point(0.3333333333333333,68.0)))
+    val m1 = h1 merge h2
+    println("merged:"+ m1.mkString)
+    m1.points(0) should be (h1.left)
+    m1.right should be (h2.right)
+    m1.points(m1.points.length-1) should be (h2.left)
+    
+  }
+  //(0.1,67.4)(0.2,67.7)(0.23333333333333334,67.8)(0.16666666666666666,67.6)
+//2012-01-20 19:16:28,136 [main] DEBUG es.upm.fi.oeg.siq.data.compr.PwlhSummary - bucket: (0.26666666666666666,67.8)(0.3,67.9)(0.3333333333333333,68.0)
+  
   @Test def testMergeQuad{
     val pts = Points(Array(0,2,1,1))
     val h1 = new Hull(Array(pts(0),pts(1),pts(2)))

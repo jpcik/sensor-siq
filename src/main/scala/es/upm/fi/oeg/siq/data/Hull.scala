@@ -3,6 +3,7 @@ package es.upm.fi.oeg.siq.data
 abstract class SHull(){
   def merge(hull:SHull):SHull
   def mkString:String
+  val size:Int
 }
 
 object SHull{
@@ -12,13 +13,14 @@ object SHull{
 case class EmptyHull extends SHull(){
   override def merge(hull:SHull)=hull
   override def mkString="()"
+  override val size=0 
 }
 case class Hull(points:Array[Point]) extends SHull(){
   private val minx = points.map(_.x).min
   private val maxx = points.map(_.x).max
   val (left,leftIdx)=points.zipWithIndex.find{case (p,i)=>p.x==minx} get
   val (right,rightIdx)=points.zipWithIndex.find{case (p,i)=>p.x==maxx} get
-  val size=points.length  
+  override val size=points.length  
   def mkString=points.mkString
   
   def next(i:Int)=
@@ -51,9 +53,14 @@ case class Hull(points:Array[Point]) extends SHull(){
 		 	dropWhile{case (d,i)=> !h.turnCw(right,i) && d!=h.right}.next
 		val hTan1=(tpi.slice(0,rightIdx+1)).reverse.iterator. 
 			dropWhile{case (d,i)=> !turnCcw(hTan2._1,i) && d!=this.left}.next
-		val l3:Array[Point] = if (lowTan1._1==left) Array() else
+		val l3:Array[Point] =  if (lowTan1._1==left) Array() else
 				points.slice(lowTan1._2,points.length)
-		val lst=points.slice(0,hTan1._2+1)++h.points.slice(hTan2._2,lowTan2._2+1)++l3
+		val l2=if (lowTan2._1==h.left) h.points.slice(hTan2._2,h.points.length):+h.left
+		  else h.points.slice(hTan2._2,lowTan2._2+1)
+		val lst=points.slice(0,hTan1._2+1)++l2++l3
+		//points.slice(0,hTan1._2+1).foreach(println)
+		//l2.foreach(println)
+		//l3.foreach(println)
 		//println(hTan1+","+hTan2+","+lowTan2+";"+lowTan1)		     
 		new Hull(lst)}		  
     }
