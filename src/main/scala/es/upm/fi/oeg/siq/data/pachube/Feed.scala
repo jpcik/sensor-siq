@@ -12,6 +12,7 @@ import com.google.gson.Gson
 import org.joda.time.DateTimeZone
 import org.scala_tools.time.Imports._
 import com.sun.jersey.api.client.UniformInterfaceException
+import java.util.Properties
 
 
 object DataFormat extends Enumeration("csv","json","xml","rdf"){
@@ -41,6 +42,12 @@ class Feed(val id:Int, val status:String, val title:String, val tags:Array[Strin
   }
 }
 
+object Pachube{
+  val props=new Properties()
+  props.load(getClass.getClassLoader.getResourceAsStream("pachube.properties"))
+  val apikey=props.getProperty("pachube.apikey")
+}
+
 object Feed{
   def apply(id:Int,ds:Array[String])=
     new Feed(id,"","",Array(),ds.map(did=>new Datastream(null,did,Array(),"")))
@@ -51,7 +58,6 @@ object Feed{
     val webResource = c.resource("http://api.pachube.com/v2/feeds/6895/datastreams/3")
     
 	val queryParams = new MultivaluedMapImpl()
-	queryParams.add("key", "c9c8f31503188d651636301d3deda6b295862803f93c2e8034750798b1257f05")
 	queryParams.add("format","csv")
 		   //queryParams.add("param2", "val2");
 	val s:String=""	
@@ -63,7 +69,7 @@ object Feed{
     val webResource = c.resource("http://api.pachube.com/v2/feeds")
     
 	val queryParams = new MultivaluedMapImpl()
-	queryParams.add("key", "c9c8f31503188d651636301d3deda6b295862803f93c2e8034750798b1257f05")
+	queryParams.add("key", Pachube.apikey )
 	queryParams.add("tag",tag)
 	queryParams.add("order","retrieved_at")
     val res = webResource.queryParams(queryParams).get(classOf[String]);
@@ -142,7 +148,7 @@ class Datastream(feed:Feed,val id:String,val tags:Array[String],val typeData:Str
   
   def getData(start:DateTime,end:DateTime,format:DataFormat.Value,feedId:String)={
     val params = new MultivaluedMapImpl()
-    params.add("key", "c9c8f31503188d651636301d3deda6b295862803f93c2e8034750798b1257f05")
+    params.add("key", Pachube.apikey)
     params.add("format",format)
     //params.add("end",end)
     params.add("start",start)
