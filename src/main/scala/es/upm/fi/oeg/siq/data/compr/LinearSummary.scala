@@ -1,16 +1,17 @@
 package es.upm.fi.oeg.siq.data.compr
 import scala.collection.mutable.ArrayBuffer
+import math._
 import es.upm.fi.oeg.siq.data._
 
 class LinearSummary(data:Series,compression:Double) extends Summary(data,compression){
   val buckets = new ArrayBuffer[LinearBucket]
   def linearApprox{
     var i=0d
-    val bucksize = data.maxCount/(this.max_buckets*2)
+    val bucksize = data.maxCount/(this.max_buckets)
     println("bucketsize: "+bucksize)
     var buffer:SHull = new EmptyHull //new ArrayBuffer[Point]
     
-    data.stream.foreach{d=>
+    data.asInstanceOf[CsvSeries].normalized.foreach{d=>
       //val p = new Point(i,d)      
       if (buffer.size<bucksize){        
         buffer=buffer merge Hull(d) }
@@ -25,8 +26,10 @@ class LinearSummary(data:Series,compression:Double) extends Summary(data,compres
     }
   }
 	
-  def generateDistribution(angle:Double,slp:Int)={
-	val d= new Distribution("",angle,data.period,data.datainterval,data.typeData,0);				
+  def generateDistribution(tangents:Array[Double],slp:Int)={
+	val d= new Distribution("",tangents,data.period,data.datainterval,data.typeData,0)
+
+	
 	buckets.foreach(bit=> {
 	  //bit.lr=null
 	  bit.regression(bit.h)
@@ -41,4 +44,22 @@ class LinearSummary(data:Series,compression:Double) extends Summary(data,compres
 	d 
   }
   
+   def getError()={
+	//var sum = 0d
+    if (buckets.isEmpty) Double.NaN
+    else
+    {
+	//var count=0
+	sqrt(buckets.map(_.totalErrorSqrSum).sum/data.maxCount.toDouble)
+   
+    }
+  }
+  override def toString={
+    val d = data.asInstanceOf[CsvSeries]
+    "interval "+data.datainterval+
+                 ";compression "+compression+
+                 data.toString+
+                 "; error "+getError+
+                 ";"+getError/(d.mean+d.stdev)//((data.max-data.min))///d.stdev)
+  }
 }

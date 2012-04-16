@@ -37,7 +37,7 @@ class PwlhSummary(data:Series,compression:Double) extends Summary(data,compressi
   println("chunks: "+chuncks)
   
   
-  private lazy val buckets={
+  lazy val buckets={
    var b:LinearBucket=null
    Stream.continually{
      if (b==null) {b=firstLin;firstLin}
@@ -172,9 +172,11 @@ class PwlhSummary(data:Series,compression:Double) extends Summary(data,compressi
 	wd.close
   }
 	
-  def generateDistribution(angle:Double,slp:Int,boostBucket:Boolean=false)={
+  
+  
+  def generateDistribution(tangents:Array[Double],slp:Int,boostBucket:Boolean=false)={
 	var bit=firstLin
-	val d= new Distribution("",angle,data.period,data.datainterval,data.typeData,0);				
+	val d= new Distribution("",tangents,data.period,data.datainterval,data.typeData,0);				
 	do {
 	  bit.lr=null
 	  bit.regression(bit.h)

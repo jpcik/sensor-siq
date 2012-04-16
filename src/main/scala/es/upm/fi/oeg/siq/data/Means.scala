@@ -1,6 +1,6 @@
 package es.upm.fi.oeg.siq.data
 
-abstract class Means{
+abstract class Means {
   val companion:MeansUtils
   def distance(item:Means):Double
   def mkString:String

@@ -18,15 +18,16 @@ import com.weiglewilczek.slf4s.Logging
 
 object SensorProfiler extends Logging{
   
-  val ds:SensorDataset=SwissExDataset//new MixedDataset(AemetDataset,PachubeDataset)//AemetDataset//SwissExDataset
-  val testds=SwissExDataset
+  val ds:SensorDataset=AemetDataset//new MixedDataset(AemetDataset,PachubeDataset)//AemetDataset//SwissExDataset
+  val testds=AemetDataset
   println (util.Random.shuffle((1 to 4).toList))
   val ranges=ds.props.map{p=>
-    val div=2
-    val list=util.Random.shuffle((1 to p._2).toList)
+    val div=9
+    val list=util.Random.shuffle((1 to p._2).toList)    
     val gsize=if(list.size%div==0) list.size/div else (list.size/div+1)
+    
     p._3 -> list.grouped(gsize).toList}.toMap // list.tak(list.take(p._2/2),list.drop(p._2/2))}.toMap
-  
+  //println("sizing "+ranges.get("humidity").get.mkString)
   val truth = new HashMap[String,Distribution]
   val alldists=new ArrayBuffer[Distribution]          
       
@@ -48,18 +49,21 @@ object SensorProfiler extends Logging{
       filter(buckets,angleFrac,d.name).map(b=>{
       val s = (b.euclidean(d),b.typeData,b.name,b.error)
       s
-    }).filter(_._1<50).filter(_._4<500).toList.sortBy(t=>(t._1)).take(5)
+    }).filter(_._1<60).filter(_._4.abs<5).toList.sortBy(t=>(t._1)).take(7)
     cosito.foreach(t=>println(t+ds.getTags(t._3.drop(7).split('-')(0)).mkString))
     val gr=cosito.groupBy(s=>s._2).map{g=>
-      //(g._2.size+(1/g._2.min._1)*4*g._2.size/(ds.propsMap.get(g._1).get._2/fact),g._2)
-      (g._2.size,g._2)
-    }.toList.sortBy(_._1).reverse
+      //(g._1,g._2.size+(1/g._2.min._1)*4*g._2.size/(ds.propsMap.get(g._1).get._2/fact),g._2)
+      //(g._1,g._2.size/(g._2.map(_._1).sum/g._2.size)*pow(1d/(ds.propsMap.get(g._1).get._2),1),g._2)
+      (g._1,g._2.size/(g._2.map(_._1).sum/g._2.size),g._2)
+      
+    }.toList.sortBy(_._2).reverse
+    println("sizeo"+gr.size)
     gr.foreach(println(_))
     var mx=0
     if (gr.isEmpty)
       List()
     else
-      gr.first._2.take(1)
+      gr.first._3.take(1)
     
   }
   
@@ -87,7 +91,7 @@ object SensorProfiler extends Logging{
       }
       else if (a(0).startsWith("interval")){
         val err=a(0).split(';').last.toDouble
-        dists+=((Distribution(dname,ang,period,interval,values,name,err),bck,ang))
+        dists+=((Distribution(dname,ds.tangents,period,interval,values,name,err),bck,ang))
       }
       else if (a(0).startsWith(";maxCount")){}
       else {
@@ -119,19 +123,24 @@ object SensorProfiler extends Logging{
   }
   def load(group:Int) = {
     ds.props foreach {prop=>
-      val indexes=if (group == -1) (1 to prop._2) else{
-      println(ranges(prop._3))
-      println(ranges(prop._3).splitAt(group))
-      val (start,_::end)=ranges(prop._3).splitAt(group)      
-      (start:::end).reduceLeft(_:::_)}
+      val indexes=if (group == -1) (1 to prop._2) 
+      else if (group<ranges(prop._3).size){
+        println(ranges(prop._3))
+        println(ranges(prop._3).splitAt(group))
+        val splitted=ranges(prop._3).splitAt(group)
+        val (start,_::end)=splitted
+        (start:::end).reduceLeft(_:::_)
+      }
+      else {
+        ranges(prop._3).reduceLeft(_:::_)
+      }
       indexes.foreach(i=>{
       //(1 to prop._2).foreach(i=>{
         val ll=loadDistributions(ds,prop._3,ds.getCode(prop._3,i))
         if (ll.isDefined)
         ll.get.foreach{
-          case (d,buckets,angleFrac)=> {
-             
-          println(d.name+";"+ d.values.values)
+          case (d,buckets,angleFrac)=> {             
+          println(d.name+";int "+ d.interval)
           //if (buckets==buck(d.interval)){
           println(d.name+";"+ d.values.values)
           alldists+=d}
@@ -150,10 +159,11 @@ object SensorProfiler extends Logging{
   }
   
   def buck(interval:Double)=
-  if (interval<1) 500 else if ( interval>=1 && interval <5) 50 else 5
+  if (interval<0.5) 500 else if ( interval>=0.5 && interval <4) 50 else if ( interval>=4 && interval <15) 5 else 2
+  //if (interval<1) 500 else if ( interval>=1 && interval <5) 50 else if ( interval>=5 && interval <15) 10 else 5
       
   def findmatch(group:Int)={
-    val testProps=testds.props.filter(!_._3.equals("unknown"))//Array(testds.propsMap("temperature"))//humidity,lysimeter,moisture,radiation,snowheight,co2,temp,voltage, windspeed,winddir)
+    val testProps=testds.props.filter(_._3.equals("temperature"))//Array(testds.propsMap("temperature"))//humidity,lysimeter,moisture,radiation,snowheight,co2,temp,voltage, windspeed,winddir)
     val buckets = 5
     val angleFrac = 8
     var tot = 0
@@ -166,6 +176,7 @@ object SensorProfiler extends Logging{
       val propMat = new HashMap[String,Int]
       ds.props.foreach(a=>propMat.put(a._3,0))
       val indexes=if (group == -1) (1 to prop._2)
+      else if (ranges(prop._3).size<=group) List()
       else ranges(prop._3)(group)
       indexes.foreach{i=>
       //(1 to prop._2).foreach{i=>
@@ -191,10 +202,13 @@ object SensorProfiler extends Logging{
              tp+=1
              fp+=cmp.length-1
            }
-           else {
+           else if (cmp.isEmpty)
              fn+=1
+           else {
+             //fn+=1
              fp+=cmp.length
-           }    
+           }
+             
            tot+=1
             }
       //println(d.percentages)
@@ -224,7 +238,7 @@ object SensorProfiler extends Logging{
     //PachubeDataset.analyzeInterval
     //PachubeDataset.analyzeInvalidData
     
-    val dd=(-1 to -1).map{i=>
+    val dd=(0 to 8).map{i=>
       alldists.clear
       load(i)
       findmatch(i)      

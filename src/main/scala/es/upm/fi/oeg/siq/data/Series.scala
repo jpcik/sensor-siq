@@ -29,10 +29,10 @@ class CsvSeries(val index:Int,val filename:String,initPeriod:Double,startVal:Int
   private def s=Source.fromFile(filename)
   val lines=s.getLines.length
   
-  override val datainterval=s.getLine(1) match {  
+  override val datainterval=10d/*s.getLine(1) match {  
     case r(st) => {st.toDouble/60} 
     case _ =>error("Data Interval unavailable! ")
-  }
+  }*/
   override val maxCount={
     println("lines in file: "+lines+" "+filename)
     val initcount=(initPeriod*24*60/datainterval).toInt

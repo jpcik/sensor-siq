@@ -18,7 +18,7 @@ object PachubeDataset extends SensorDataset{
 
   val rootPath="g:/doc/semint/SensorAnnotation/"
   override val props = Array(unknown,temp,humidity,pressure,winddir,windspeed,precipitation)
-  
+  override val tangents=Array(0.0)
   //override def getCode(i:Int)=i.toString
    
   private val feeds=

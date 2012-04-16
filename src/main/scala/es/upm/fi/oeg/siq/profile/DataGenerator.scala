@@ -8,18 +8,16 @@ import es.upm.fi.oeg.siq.data.compr.PwlhSummary
 import au.com.bytecode.opencsv.CSVReader
 import scala.io.Source
 import java.util.TreeMap
+import es.upm.fi.oeg.siq.data.compr.LinearSummary
 
 object DataGenerator {
   val rootPath="g:/doc/semint/SensorAnnotation/"
   //def dataPath(set:Int)=rootPath+"benchmark_"+set+"/"
   //def resultPath(set:String)=rootPath+"result_"+set+"/"
-  val ds:SensorDataset=SwissExDataset
+  val ds:SensorDataset=AemetDataset
    
-  /*val propsAemet={
-    AemetSeries.loadAllCodesPerType
-  }  */
-      
-   
+  
+
   def generate = {
     //val bench="aemet"
     ds.props.foreach(prop =>
@@ -38,13 +36,13 @@ object DataGenerator {
 	        val data=new CsvSeries(0,ds.dataPath(prop._3,code),40000/dataDay,0,prop._3)
 	      w.writeNext(Array(data.toString))
 	      Array(8).foreach{angle=>	  
-    	    
+    	        	 
 	        println(prop._1+code+".csv")
 
-	        val pwl2 = PwlhSummary(data,buckets*data.period/data.maxCount)
-	        	pwl2.pwlh
+	        val pwl2 = new LinearSummary(data,buckets*data.period/data.maxCount)
+	        	pwl2.linearApprox
 	        	//pwl2.export(buckets,resultPath("data")+prop._1+code+"_"+buckets)
-	        	val dis=pwl2.generateDistribution(Pi/angle,30,false)
+	        	val dis=pwl2.generateDistribution(ds.tangents,30)
 	        	
 	        	//println(dis.values.values)
 	            w.writeNext(Array("dist",buckets.toString,angle.toString,""+dis.values.values))
@@ -137,7 +135,7 @@ object DataGenerator {
 		  println("compression "+96*data.period/data.maxCount)
 		val comp =  new PwlhSummary(data,96*data.period/data.maxCount)
 	    comp.pwlh
-	    val d = comp.generateDistribution(Pi/12,20,false)
+	    val d = comp.generateDistribution(Array(),20,false)
 		//val d = new Distribution(prop._3,12,prop._3) 
 		//val idxs= comp.buckets.map(b=>values.floorEntry{b.regression(b.h); b.lr.getSlope*20}).map(e=>e.getValue())
 		//println(idxs.foldLeft(prop._3+i+": ")((e,d)=>e+","+d))

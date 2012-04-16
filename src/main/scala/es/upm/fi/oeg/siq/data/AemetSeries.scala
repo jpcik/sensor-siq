@@ -30,7 +30,7 @@ object AemetSeries extends AemetSeries with Logging{
   } 
   
   def loadCodes={
-    val s=Source.fromInputStream(getClass.getResourceAsStream("/aemet.properties"))
+    val s=Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("aemet.properties"))
     s.getLines.map{line=>
       val fields=line.split(';')
       if (fields(1).size==0) fields(0)

@@ -7,10 +7,11 @@ import scala.collection.JavaConversions._
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
  
-case class Distribution(val name:String,val gap:Double,
+case class Distribution(val name:String,tangents:Array[Double],//val gap:Double,
                    val period:Double,val interval:Double,val typeData:String, val error:Double) extends Means {
   val values:TreeMap[Double,Double] = new TreeMap
-  (-Pi/2 to Pi/2 by gap).foreach(angle=>values.put(tan(angle),0))
+  tangents.foreach(tg=>values.put(tg,0))
+  //(-Pi/2 to Pi/2 by gap).foreach(angle=>values.put(tan(angle),0))
   val symbols=new ArrayBuffer[Char]
   val symbolDir=(values.keySet zip (65 to 102).map(_.toChar)).toMap
   
@@ -23,7 +24,7 @@ case class Distribution(val name:String,val gap:Double,
   }
 
   def +(d:Distribution)={
-    val dd = new Distribution("generated",gap,period,interval,this.typeData,this.error)
+    val dd = new Distribution("generated",tangents,period,interval,this.typeData,this.error)
     val vv = d.values.entrySet zip values.entrySet
     vv.foreach(a=>dd.add(a._1.getKey,a._1.getValue+a._2.getValue))  
     dd
@@ -99,8 +100,18 @@ object Distribution extends MeansUtils{
     val angle = Pi/angleFrac
     apply(name,angle,period,interval,values,typeData,error)
   }  
-  def apply(name:String,angle:Double,period:Double,interval:Double,values:Array[Double],typeData:String,error:Double)={
-    val d = new Distribution(name,angle,period,interval,typeData,error)
+  def apply(name:String,tangents:Array[Double],period:Double,interval:Double,values:Array[Double],typeData:String,error:Double)={
+    val d = new Distribution(name,tangents,period,interval,typeData,error)
+    //d.symbols+=
+    tangents.zipWithIndex.
+        foreach{case (a,i)=> d.add(tan(a),values(i))}
+    d
+    
+  }
+
+  def apply(name:String,angle:Double,period:Double,interval:Double,values:Array[Double],typeData:String,error:Double)={    
+
+    val d = new Distribution(name,(-Pi/2 to Pi/2 by angle).map(tan(_)).toArray,period,interval,typeData,error)
     //d.symbols+=
     (-Pi/2 to Pi/2 by angle).zipWithIndex.
         foreach{case (a,i)=> d.add(tan(a),values(i))}
@@ -114,7 +125,7 @@ object Distribution extends MeansUtils{
       =>a.asInstanceOf[Distribution]+b.asInstanceOf[Distribution]).asInstanceOf[Distribution]
    val d=list.first.asInstanceOf[Distribution]   
    val lala=red.values.values.map(_/d.values.size).toArray 
-   val dd=Distribution("mean",d.gap,d.period,d.interval,red.values.values.map(_/list.size).toArray,d.typeData,d.error)
+   val dd=Distribution("mean",d.tangents,d.period,d.interval,red.values.values.map(_/list.size).toArray,d.typeData,d.error)
    //println("meannnn: "+dd.values.values.toString)
    dd
   }

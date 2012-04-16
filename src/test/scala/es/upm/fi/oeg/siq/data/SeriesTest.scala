@@ -27,6 +27,7 @@ import es.upm.fi.oeg.siq.data.compr.PwlhSummary
 import es.upm.fi.oeg.siq.data.compr.LinearSummary
 import es.upm.fi.oeg.siq.profile.AemetDataset
 import es.upm.fi.oeg.siq.profile.PachubeDataset
+import es.upm.fi.oeg.siq.profile.SwissExDataset
 
 
 //@RunWith(classOf[JUnitRunner])
@@ -110,7 +111,7 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
     //println(summ.data.toString())
     
     summ.pwlh
-    val d = summ.generateDistribution(Pi/12,20,false)
+    val d = summ.generateDistribution(Array(),20,false)
     percs+=d.percentages.toList
     strs+=(summ.toString) 
     /*
@@ -133,13 +134,17 @@ class SeriesTest  extends JUnitSuite with ShouldMatchersForJUnit with Checkers {
     println(summ.toString)*/
   }
 
-  @Test
-  def testLinearAppr(){
-    val summ = new LinearSummary(CsvSeries(temp._1+"14.csv",humidity._3),0.2)
+  @Test def testLinearAppr(){
+    val ds=AemetDataset
+    val summ = new LinearSummary(new CsvSeries(0,ds.dataPath("humidity","08004"),0,0,"humidity"),0.2)
     
     println(summ.data.toString())
     summ.linearApprox
-    val d = summ.generateDistribution(Pi/12,20)
+    summ.buckets.foreach{b=>
+      println(b.h.left.x+"," +b.getValue(b.h.left.x))
+      println(b.h.right.x+"," +b.getValue(b.h.right.x))
+    }
+    val d = summ.generateDistribution(SwissExDataset.tangents,30)
     println(d.values.values)
   }    
 
